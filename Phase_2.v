@@ -45,6 +45,7 @@ wire displayArea;
 wire paddle;
 wire ball;
 wire block1,block2,block3,block4,block5,block6,block7,block8,block9;
+wire movingblock1, movingblock2;
 wire top_border, right_border, left_border;
 wire screen_border;
 
@@ -58,6 +59,9 @@ reg [10:0]x_ball,y_ball; //the top right of the ball
 
 reg [10:0] x_block1,x_block2,x_block3,x_block4,x_block5,x_block6,x_block7,x_block8,x_block9; //top right corner of block
 reg [10:0] y_block1,y_block2,y_block3,y_block4,y_block5,y_block6,y_block7,y_block8,y_block9;
+
+reg [10:0] x_movingblock1, x_movingblock2;
+reg [10:0] y_movingblock1, y_movingblock2;
 
 reg [10:0] x_right_border, y_right_border;
 reg [10:0] x_left_border, y_left_border;
@@ -87,6 +91,8 @@ assign block7 = (xCounter >= x_block7 && xCounter <= x_block7 + 8'd80 && yCounte
 assign block8 = (xCounter >= x_block8 && xCounter <= x_block8 + 8'd80 && yCounter >= y_block8 && yCounter <= y_block8 + 8'd30);
 assign block9 = (xCounter >= x_block9 && xCounter <= x_block9 + 8'd80 && yCounter >= y_block9 && yCounter <= y_block9 + 8'd30);
 
+assign movingblock1 = (xCounter >= x_movingblock1 && xCounter <= x_movingblock1 + 8'd80 && yCounter >= y_movingblock1 && yCounter <= y_movingblock1 + 8'd30);
+assign movingblock2 = (xCounter >= x_movingblock2 && xCounter <= x_movingblock2 + 8'd80 && yCounter >= y_movingblock2 && yCounter <= y_movingblock2 + 8'd30);
 ///////////////////////////////////////////////////////////////////////////////FSM for collisions
 reg [10:0]S;
 reg [10:0]NS;
@@ -116,6 +122,11 @@ assign hit_block8 = ((((y_block8+5'd30)==y_ball) && (x_ball > (x_block8-5'd20)) 
 wire hit_block9;
 assign hit_block9 = ((((y_block9+5'd30)==y_ball) && (x_ball > (x_block9-5'd20)) && (x_ball < (x_block9 + 8'd80))) || ((y_block9==(y_ball+5'd20)) && (x_ball > (x_block9-5'd20)) && (x_ball < (x_block9 + 8'd80)))) ? 1'b1 : 1'b0;
 
+wire hit_movingblock1;
+assign hit_movingblock1 = ((((y_movingblock1+5'd30)==y_ball) && (x_ball > (x_movingblock1-5'd20)) && (x_ball < (x_movingblock1 + 8'd80))) || ((y_movingblock1==(y_ball+5'd20)) && (x_ball > (x_movingblock1-5'd20)) && (x_ball < (x_movingblock1 + 8'd80)))) ? 1'b1 : 1'b0;
+wire hit_movingblock2;
+assign hit_movingblock2 = ((((y_movingblock2+5'd30)==y_ball) && (x_ball > (x_movingblock2-5'd20)) && (x_ball < (x_movingblock2 + 8'd80))) || ((y_movingblock2==(y_ball+5'd20)) && (x_ball > (x_movingblock2-5'd20)) && (x_ball < (x_movingblock2 + 8'd80)))) ? 1'b1 : 1'b0;
+
 // Check if the ball hits a brick from the left or the right (left)
 wire hit_side_block1;
 assign hit_side_block1 = (((x_block1==(x_ball+5'd20)) && (y_ball > y_block1-5'd20) && (y_ball < (y_block1 + 8'd30))) || (((x_block1 + 11'd80)==x_ball) && (y_ball > (y_block1-5'd20)) && (y_ball < (y_block1 + 8'd30)))) ? 1'b1 : 1'b0;
@@ -136,6 +147,11 @@ assign hit_side_block8 = (((x_block8==(x_ball+5'd20)) && (y_ball > y_block8-5'd2
 wire hit_side_block9;
 assign hit_side_block9 = (((x_block9==(x_ball+5'd20)) && (y_ball > y_block9-5'd20) && (y_ball < (y_block9 + 8'd30))) || (((x_block9 + 11'd80)==x_ball) && (y_ball > (y_block9-5'd20)) && (y_ball < (y_block9 + 8'd30)))) ? 1'b1 : 1'b0;
 
+wire hit_side_movingblock1;
+assign hit_side_movingblock1 = (((x_movingblock1==(x_ball+5'd20)) && (y_ball > y_movingblock1-5'd20) && (y_ball < (y_movingblock1 + 8'd30))) || (((x_movingblock1 + 11'd80)==x_ball) && (y_ball > (y_movingblock1-5'd20)) && (y_ball < (y_movingblock1 + 8'd30)))) ? 1'b1 : 1'b0;
+wire hit_side_movingblock2;
+assign hit_side_movingblock2 = (((x_movingblock2==(x_ball+5'd20)) && (y_ball > y_movingblock2-5'd20) && (y_ball < (y_movingblock2 + 8'd30))) || (((x_movingblock2 + 11'd80)==x_ball) && (y_ball > (y_movingblock2-5'd20)) && (y_ball < (y_movingblock2 + 8'd30)))) ? 1'b1 : 1'b0;
+
 wire paddle_hit; // checks any pixel of the ball overlaps with the top of the paddle or the side of the paddle
 assign paddle_hit = ((((y_ball + 5'd20) >= y_pad) && (y_ball + 5'd20 < y_pad + 5'd15) && (x_ball > x_pad - 8'd20) && (x_ball < (x_pad + 8'd100))))  ? 1'b1 : 1'b0;
 
@@ -155,7 +171,7 @@ always @ (posedge update or negedge rst)
 begin
 	if(rst == 1'd0)
 		S <= before;
-	else if (score == 11'd9 || cheat_win == 1'd1)
+	else if (cheat_win == 1'd1)
 		S <= end_game;
 	else
 		S <= NS;
@@ -164,7 +180,6 @@ end
 ////////////////////////////////////////state transitions
 always @(*)
 begin
-	
 	case (S)
 		before:
 			begin
@@ -185,7 +200,8 @@ begin
 
 		ball_move_up:
 		begin
-			if((hit_block1 == 1'd0 && hit_block2 == 1'd0 && hit_block3 == 1'd0 && hit_block4 == 1'd0 && hit_block5 == 1'd0 && hit_block6 == 1'd0 && hit_block7 == 1'd0 && hit_block8 == 1'd0 && hit_block9 == 1'd0) && hit_me == 1'd0)
+			if((hit_block1 == 1'd0 && hit_block2 == 1'd0 && hit_block3 == 1'd0 && hit_block4 == 1'd0 && hit_block5 == 1'd0 && hit_block6 == 1'd0 && 
+					hit_block7 == 1'd0 && hit_block8 == 1'd0 && hit_block9 == 1'd0) && hit_me == 1'd0)
 				NS = ball_move_up;
 			else if((hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1) || hit_me == 1'd1)
 				NS = ball_move_down;
@@ -215,10 +231,10 @@ begin
 		
 		ball_move_45:
 		begin
-			if(hit_side_right == 1'b1)
-				NS = ball_move_135;
-			else if (score == 11'd9) //////////////score tracker
+			if(score == 11'd9) //////////////score tracker
 				NS = end_game;
+			else if(hit_side_right == 1'b1)
+				NS = ball_move_135;
 			else if(hit_me == 1'b1)
 				NS = ball_move_315;
 			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
@@ -231,10 +247,10 @@ begin
 		
 		ball_move_135:
 		begin
-			if(hit_side_left == 1'b1)
-				NS = ball_move_45;
-			else if (score == 11'd9) //////////////score tracker
+			if (score == 11'd9) //////////////score tracker
 				NS = end_game;
+			else if(hit_side_left == 1'b1)
+				NS = ball_move_45;
 			else if(hit_me == 1'b1)
 				NS = ball_move_225;
 			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
@@ -247,12 +263,12 @@ begin
 		
 		ball_move_225:
 		begin
-			if(hit_side_left == 1'b1)
-				NS = ball_move_315;
-			else if (score == 11'd9) //////////////score tracker
+			if(score == 11'd9) //////////////score tracker
 				NS = end_game;
 			else if(hit_me_low == 1'b1)  //you suck
 				NS = end_game;
+			else if(hit_side_left == 1'b1)
+				NS = ball_move_315;
 			else if(paddle_hit == 1'b1)
 				NS = ball_move_135;
 			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
@@ -265,12 +281,12 @@ begin
 		
 		ball_move_315:
 		begin
-			if(hit_side_right == 1'b1)
-				NS = ball_move_225;
-			else if (score == 11'd9) //////////////score tracker
+			if(score == 11'd9) //////////////score tracker
 				NS = end_game;
 			else if(hit_me_low == 1'b1) ///you suck
 				NS = end_game;
+			else if(hit_side_right == 1'b1)
+				NS = ball_move_225;
 			else if(paddle_hit == 1'b1)
 				NS = ball_move_45;
 			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
@@ -293,7 +309,7 @@ begin
 		
 		ball_move_0:
 		begin
-			if (hit_side_right == 1'd1)
+			if(hit_side_right == 1'd1)
 				NS = ball_move_180;
 			else
 				NS = ball_move_0;
@@ -301,17 +317,17 @@ begin
 				NS = ball_move_135;
 		end
 		
-		end_game: 
-			if(start_game == 1'd0)
-				NS = before;	
-			else
+		end_game:
+			if(score == 11'd9 || cheat_win == 1'd1)
 				NS = beforeL2;
+			else
+				NS = end_game;
 				
 		beforeL2:
 			begin
 				if(rst_game == 1'd0) ///resets the game
 					NS = beforeL2;
-				else if(start_game == 1'b1) ///makes the ball move
+				else if(start_game == 1'b1 && begin_game == 1'd1) ///makes the ball move
 					begin
 						if (start_angle45 == 1'd1)
 							NS = ball_move_45L2;
@@ -320,15 +336,13 @@ begin
 						else
 							NS = ball_move_135L2;
 					 end	
-				else
-					NS = beforeL2;
 			end	
 
 		ball_move_upL2:
 		begin
-			if((hit_block1 == 1'd0 && hit_block2 == 1'd0 && hit_block3 == 1'd0 && hit_block4 == 1'd0 && hit_block5 == 1'd0 && hit_block6 == 1'd0 && hit_block7 == 1'd0 && hit_block8 == 1'd0 && hit_block9 == 1'd0) && hit_me == 1'd0)
+			if((hit_movingblock1 == 1'd0 && hit_movingblock2 == 1'd0 && hit_block1 == 1'd0 && hit_block2 == 1'd0 && hit_block3 == 1'd0 && hit_block4 == 1'd0 && hit_block5 == 1'd0 && hit_block6 == 1'd0 && hit_block7 == 1'd0 && hit_block8 == 1'd0 && hit_block9 == 1'd0) && hit_me == 1'd0)
 				NS = ball_move_upL2;
-			else if((hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1) || hit_me == 1'd1)
+			else if((hit_movingblock1 == 1'd1 || hit_movingblock2 == 1'd1 || hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1) || hit_me == 1'd1)
 				NS = ball_move_downL2;
 		end
 			
@@ -352,15 +366,15 @@ begin
 		
 		ball_move_45L2:
 		begin
-			if(hit_side_right == 1'b1)
-				NS = ball_move_135L2;
-			else if (score == 11'd9) //////////////score tracker
+			if (score == 11'd9) //////////////score tracker
 				NS = end_gameL2;
+			else if(hit_side_right == 1'b1)
+				NS = ball_move_135L2;
 			else if(hit_me == 1'b1)
 				NS = ball_move_315L2;
-			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
+			else if(hit_movingblock1 == 1'd1 || hit_movingblock2 == 1'd1 || hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
 				NS = ball_move_315L2;
-			else if(hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
+			else if(hit_side_movingblock1 == 1'd1 || hit_side_movingblock2 == 1'd1 || hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
 				NS = ball_move_135L2; 
 			else
 				NS = ball_move_45L2;
@@ -368,15 +382,15 @@ begin
 		
 		ball_move_135L2:
 		begin
-			if(hit_side_left == 1'b1)
-				NS = ball_move_45L2;
-			else if (score == 11'd9) //////////////score tracker
+			if (score == 11'd9) //////////////score tracker
 				NS = end_gameL2;
+			else if(hit_side_left == 1'b1)
+				NS = ball_move_45L2;
 			else if(hit_me == 1'b1)
 				NS = ball_move_225L2;
-			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
+			else if(hit_movingblock1 == 1'd1 || hit_movingblock2 == 1'd1 || hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
 				NS = ball_move_225L2;
-			else if(hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
+			else if(hit_side_movingblock1 == 1'd1 || hit_side_movingblock2 == 1'd1 || hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
 				NS = ball_move_45L2;
 			else
 				NS = ball_move_135L2;
@@ -384,17 +398,17 @@ begin
 		
 		ball_move_225L2:
 		begin
-			if(hit_side_left == 1'b1)
-				NS = ball_move_315L2;
-			else if (score == 11'd9) //////////////score tracker
+			if (score == 11'd9) //////////////score tracker
 				NS = end_gameL2;
 			else if(hit_me_low == 1'b1)  //you suck
 				NS = end_gameL2;
+			else if(hit_side_left == 1'b1)
+				NS = ball_move_315L2;
 			else if(paddle_hit == 1'b1)
 				NS = ball_move_135L2;
-			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
+			else if(hit_movingblock1 == 1'd1 || hit_movingblock2 == 1'd1 || hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
 				NS = ball_move_135L2;
-			else if(hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
+			else if(hit_side_movingblock1 == 1'd1 || hit_side_movingblock2 == 1'd1 || hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
 				NS = ball_move_315L2;
 			else
 				NS = ball_move_225L2;
@@ -402,17 +416,17 @@ begin
 		
 		ball_move_315L2:
 		begin
-			if(hit_side_right == 1'b1)
-				NS = ball_move_225L2;
-			else if (score == 11'd9) //////////////score tracker
+			if (score == 11'd9) //////////////score tracker
 				NS = end_gameL2;
 			else if(hit_me_low == 1'b1) ///you suck
 				NS = end_gameL2;
+			else if(hit_side_right == 1'b1)
+				NS = ball_move_225L2;
 			else if(paddle_hit == 1'b1)
 				NS = ball_move_45L2;
-			else if(hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
+			else if(hit_movingblock1 == 1'd1 || hit_movingblock2 == 1'd1 || hit_block1 == 1'd1 || hit_block2 == 1'd1 || hit_block3 == 1'd1 || hit_block4 == 1'd1 || hit_block5 == 1'd1 || hit_block6 == 1'd1 || hit_block7 == 1'd1 || hit_block8 == 1'd1 || hit_block9 == 1'd1)
 				NS = ball_move_45L2;
-			else if(hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
+			else if(hit_side_movingblock1 == 1'd1 || hit_side_movingblock2 == 1'd1 || hit_side_block1 == 1'd1 || hit_side_block2 == 1'd1 || hit_side_block3 == 1'd1 || hit_side_block4 == 1'd1 || hit_side_block5 == 1'd1 || hit_side_block6 == 1'd1 || hit_side_block7 == 1'd1 || hit_side_block8 == 1'd1 || hit_side_block9 == 1'd1)
 				NS = ball_move_225L2;		
 			else 
 				NS = ball_move_315L2;
@@ -467,6 +481,12 @@ begin
 				y_block8 = 11'd52;
 				x_block9 = 11'd403;
 				y_block9 = 11'd52;
+				
+				x_movingblock1 = 11'd500;
+				y_movingblock1 = 11'd700;
+				
+				x_movingblock2 = 11'd500;
+				y_movingblock2 = 11'd700;
 				
 				x_screen_border = 11'd20;
 				y_screen_border = 11'd20;
@@ -788,18 +808,14 @@ begin
 				
 			
 			end_game: // wut ahh final reveal	
-				begin
-				if (score == 11'd9 || cheat_win == 1'd1)
-					begin
-						status_win <= 1'd1;
-					end
-				else if (score != 11'd9)
+			begin
+				if (score != 11'd9)
 				begin
 					status_lose <= 1'd1;
 				end	
 				rst_game = 1'd0;
-				end
-				
+			end
+			
 		beforeL2:
 			begin
 				// Set the game status controls
@@ -832,6 +848,12 @@ begin
 				y_block8 = 11'd52;
 				x_block9 = 11'd403;
 				y_block9 = 11'd52;
+				
+				x_movingblock1 = 11'd116;
+				y_movingblock1 = 11'd200;
+				
+				x_movingblock2 = 11'd400;
+				y_movingblock2 = 11'd200;
 				
 				x_screen_border = 11'd20;
 				y_screen_border = 11'd20;
@@ -1148,10 +1170,10 @@ begin
 			
 			end_gameL2: // wut ahh final reveal	
 				begin
-				if (score == 11'd9 || cheat_win == 1'd1)
-					begin
-						status_win <= 1'd1;
-					end
+				if (score == 11'd9)
+				begin
+					status_win <= 1'd1;
+				end
 				else if (score != 11'd9)
 				begin
 					status_lose <= 1'd1;
@@ -1203,97 +1225,62 @@ end
 
 reg [2:0]NS_Screen,S_Screen;
 
-parameter SS = 5'd0,RSNR = 5'd1,RSR = 5'd2,L = 5'd3,W = 5'd4, SS2 = 5'd5, RSNR2 = 5'd6, RSR2 = 5'd7;
+parameter SS = 5'd0,RSNR = 5'd1,RSR = 5'd2,L = 5'd3,W = 5'd4, SS2 = 5'd5, RSNR2 = 5'd6, RSR2 = 5'd7, L2 = 5'd8, W2 = 5'd9;
 
 input begin_game;
 
-reg status_lose,status_win, status_lose2, status_win2;
+reg status_lose,status_win;
 
-reg [0:0]trigger,rst_game;
+reg rst_game;
 
 
 
 always @(posedge clk or negedge rst)
 
 begin
-
 	if(rst == 1'b0)
-
 		S_Screen <= SS;
-
 	else
-
 		S_Screen <= NS_Screen;
-
 end
 
 
 
 always @(*)
-
 begin
-
 	case(S_Screen)
-
 		SS:
-
-			if(rst == 1'd0 || begin_game == 1'd0)
-
+			if(rst_game == 1'd0 || begin_game == 1'd0)
 				NS_Screen = SS;
-
 			else if(begin_game == 1'd1)
-
 				NS_Screen = RSNR;
 
 		RSNR:
-
 			if(start_game == 1'd0)
-
 				NS_Screen = RSNR;
-
 			else
-
 				NS_Screen = RSR;
 
 		RSR:
-
-			if(status_win == 1'd1)
-
+			if(status_win == 1'd1 || cheat_win == 1'd1)
 				NS_Screen = W;
-
 			else if(status_lose == 1'd1)
-
 				NS_Screen = L;
-
 			else if(status_win == 1'd0 && status_lose == 1'd0)
-
 				NS_Screen = RSR;
+				
+		W:
+			if(begin_game == 1'd0 || start_game == 1'b0)
+				NS_Screen = RSNR2;
+			else
+				NS_Screen = W;
 
 		L:
 
-			if(begin_game == 1'd1 || start_game == 1'b1)
-
+			if(begin_game == 1'd1 && start_game == 1'b1)
 				NS_Screen = L;
-
-			else if(begin_game == 1'd0 && start_game == 1'b0)
-
-				NS_Screen = SS;
-
-		W:
-
-			if(begin_game == 1'd1 || start_game == 1'b1)
-
-				NS_Screen = W;
-
-			else if(begin_game == 1'd0 && start_game == 1'b0)
-
-				NS_Screen = SS2;
-				
-		SS2:
-			if(start_game == 1'd0 && begin_game == 1'd0)
-				NS_Screen = SS2;
-			else if(begin_game == 1'd1)
-				NS_Screen = RSNR2;
+			else if(begin_game == 1'd0 || start_game == 1'b0)
+				NS_Screen = SS;				
 
 		RSNR2:
 			if(start_game == 1'd0)
@@ -1303,12 +1290,23 @@ begin
 		
 		RSR2:
 			if(status_win == 1'd1)
-				NS_Screen = W;
+				NS_Screen = W2;
 			else if(status_lose == 1'd1)
-				NS_Screen = L;
+				NS_Screen = L2;
 			else if(status_win == 1'd0 && status_lose == 1'd0)
 				NS_Screen = RSR2;
 
+		L2:
+			if(begin_game == 1'd1 || start_game == 1'b1)
+				NS_Screen = L2;
+			else if(begin_game == 1'd0 && start_game == 1'b0)
+				NS_Screen = SS;
+
+		W2:
+			if(begin_game == 1'd1 || start_game == 1'b1)
+				NS_Screen = W2;
+			else if(begin_game == 1'd0 && start_game == 1'b0)
+				NS_Screen = SS;
 
 		default: NS_Screen = SS;
 
@@ -1408,26 +1406,54 @@ begin
 
 				&& ~row_Win4[4] && ~row_Win4[5] && ~row_Win4[6];
 		end	
-		
-		SS2:
-		begin
-		R <= 1'd1;
-		B <= 1'd1;
-		G <= 1'd1;
-		end
 
 		RSNR2:
 		begin
 		R <= screen_border && ~paddle && ~block1 && ~block2 && ~block3 && ~block4 && ~block5 && ~block6 && ~block7 && ~block8 && ~block9 && ~ball && 1'b1;
 		B <= screen_border && ~paddle && 1'b1;
-		G <= screen_border && ~paddle && ~block1 && ~block2 && ~block3 && ~block4 && ~block5 && ~block6 && ~block7 && ~block8 && ~block9 && 1'b1;
+		G <= screen_border && ~paddle && ~block1 && ~block2 && ~block3 && ~block4 && ~block5 && ~block6 && ~block7 && ~block8 && ~block9 && ~movingblock1 && ~movingblock2 && 1'b1;
 		end
 		
 		RSR2:
 		begin
 		R <= screen_border && ~paddle && ~block1 && ~block2 && ~block3 && ~block4 && ~block5 && ~block6 && ~block7 && ~block8 && ~block9 && ~ball && 1'b1;
 		B <= screen_border && ~paddle && 1'b1;
-		G <= screen_border && ~paddle && ~block1 && ~block2 && ~block3 && ~block4 && ~block5 && ~block6 && ~block7 && ~block8 && ~block9 && 1'b1;
+		G <= screen_border && ~paddle && ~block1 && ~block2 && ~block3 && ~block4 && ~block5 && ~block6 && ~block7 && ~block8 && ~block9 && ~movingblock1 && ~movingblock2 && 1'b1;
+		end
+		
+		L2:
+		begin
+			R <= 1'd1 && ~row_Lose0[0] && ~row_Lose0[1] && ~row_Lose0[2] && ~row_Lose0[3] && ~row_Lose0[4] && ~row_Lose0[5] && ~row_Lose1[0] && 
+
+				~row_Lose1[1] && ~row_Lose1[2] && ~row_Lose1[3] && ~row_Lose1[4] && ~row_Lose1[5] && ~row_Lose1[0] && ~row_Lose1[1] && ~row_Lose1[2] 
+
+				&& ~row_Lose1[3] && ~row_Lose1[4] && ~row_Lose1[5] && ~row_Lose2[0] && ~row_Lose2[1] && ~row_Lose2[2] && ~row_Lose2[3] && 
+
+				~row_Lose2[4] && ~row_Lose2[5] && ~row_Lose3[0] && ~row_Lose3[1] && ~row_Lose3[2] && ~row_Lose3[3] && ~row_Lose3[4] 
+
+				&& ~row_Lose3[5] && ~row_Lose4[0] && ~row_Lose4[1] && ~row_Lose4[2] && ~row_Lose4[3] && ~row_Lose4[4] && ~row_Lose4[5];
+
+			B <= 1'd0;
+
+			G <= 1'd0;
+
+		end
+
+		W2:
+		begin
+			R <= 1'd0;
+
+			B <= 1'd0;
+
+			G <= 1'd1 && ~row_Win0[0] && ~row_Win0[1] && ~row_Win0[2] && ~row_Win0[3] && ~row_Win0[4] && ~row_Win0[5] && ~row_Win0[6] && 
+
+				~row_Win1[0] && ~row_Win1[1] && ~row_Win1[2] && ~row_Win1[3] && ~row_Win1[4] && ~row_Win1[5] && ~row_Win1[6] && ~row_Win2[0] 
+
+				&& ~row_Win2[1] && ~row_Win2[2] && ~row_Win2[3] && ~row_Win2[4] && ~row_Win2[5] && ~row_Win2[6] && ~row_Win3[0] && ~row_Win3[1]
+
+				&& ~row_Win3[2] && ~row_Win3[3] && ~row_Win3[4] && ~row_Win3[5] && ~row_Win4[0] && ~row_Win4[1] && ~row_Win4[2] && ~row_Win4[3]
+
+				&& ~row_Win4[4] && ~row_Win4[5] && ~row_Win4[6];
 		end
 		
 
